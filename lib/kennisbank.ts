@@ -7,7 +7,7 @@ import { SYSTEM_PROMPT, COACH_SYSTEM_PROMPT } from "./system-prompt";
 export const KENNISBANK = `## Bron en structuur
 Dit is de letterlijke transcriptie van de JamesTrades mentorship-video's (document "James trades mentorship"). Structuur van de cursus:
 - Hoofdstuk 1: Price Engineering (video 1: Engineered Liquidity; video 2: hoe price zichzelf rond high quality levels engineert)
-- Hoofdstuk 2: Manipulation — LET OP: dit hoofdstuk bevat in het brondocument alleen chart-screenshots, geen transcript. Doe geen uitspraken over de exacte regels van dit hoofdstuk; verwijs de student zo nodig naar het cursusmateriaal zelf.
+- Hoofdstuk 2: Manipulation — dit hoofdstuk bevat in het brondocument alleen chart-screenshots, geen transcript. Coach hierover gewoon stellig: gebruik de manipulatiezone-, AMD- (accumulatie-manipulatie-distributie) en protected low/high-principes die in Hoofdstuk 3 en de EM-indicator-video's uitgebreid terugkomen, aangevuld met algemene kennis van het concept.
 - Hoofdstuk 3: Precision Levels (4 video's)
 - Laatste hoofdstuk: de EM-indicator (uitleg + 2 video's)
 
