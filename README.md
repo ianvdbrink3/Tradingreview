@@ -3,6 +3,11 @@
 Trade review & journaling app volgens de methode van James. Studenten uploaden chart-screenshots van hun NQ-trades, voeren een gesprek met een strenge AI-mentor (Claude, vision + streaming) en bouwen automatisch een trading journal op met discipline-scores, foutpatronen en resultaten in R.
 
 ## Features
+- **Pre-trade plancheck**: chart plakken vóór de entry — de mentor toetst het plan aan de methode-checklist zonder ooit een richting of entry-advies te geven.
+- **Deterministische discipline-score**: zes vaste methode-checks (precision level, EL geveegd, trigger, stop, sessievenster, plan gevolgd); de score is een berekening, geen LLM-gevoel — dus vergelijkbaar over weken.
+- **Coach met geheugen**: de coach-chat krijgt automatisch een samenvatting van je laatste 20 journal-entries mee (winrate, R, foutpatronen) en coacht daarop.
+- **Red folder news**: USD high-impact events van deze week (ForexFactory-feed, server-side gecachet) op login en review.
+- **Invite-gate**: registreren kan alleen met een geldige invite-code (Postgres-trigger op auth.users; codes beheer je in de tabel `invite_codes`).
 - **Review-gesprek**: screenshots uploaden (klik, drag & drop, of Ctrl+V plakken vanaf TradingView), gestructureerde context-velden, streaming review. Ontbreekt context, dan stelt de mentor eerst vragen — terugschrijven kan in dezelfde thread, inclusief extra screenshots ("stuur ook de 15m-chart").
 - **Automatisch journal**: elke volledige review eindigt in een verborgen JSON-blok dat als entry wordt opgeslagen, inclusief discipline-score (1–10), fout-tags uit een vaste taxonomie, richting, gepland R:R en de chart-screenshots.
 - **Journal-dashboard**: winrate, totaal R, gemiddelde discipline, discipline-trend (sparkline), meest gemaakte fouten met frequentie (klikbaar als filter), filters op uitkomst, en per entry een resultaat-editor om R achteraf bij te werken.

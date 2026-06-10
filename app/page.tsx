@@ -4,12 +4,14 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import SessionClock from "./components/session-clock";
+import NewsWeek from "./components/news-week";
 
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [invite, setInvite] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,8 +29,17 @@ export default function LoginPage() {
         router.refresh();
       }
     } else {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) setError("Registreren mislukt: " + error.message);
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { invite_code: invite.trim().toUpperCase() } },
+      });
+      if (error)
+        setError(
+          /invalid_invite_code|database error/i.test(error.message)
+            ? "Ongeldige of verbruikte invite-code. Vraag een code aan je mentor."
+            : "Registreren mislukt: " + error.message
+        );
       else setInfo("Account aangemaakt. Check je mail als bevestiging vereist is, en log daarna in.");
     }
     setBusy(false);
@@ -53,6 +64,9 @@ export default function LoginPage() {
 
       <div className="mb-5">
         <SessionClock />
+        <div className="mt-2 px-1">
+          <NewsWeek compact />
+        </div>
       </div>
 
       <div className="bg-panel border border-edge rounded-xl p-5">
@@ -92,12 +106,27 @@ export default function LoginPage() {
           autoComplete={mode === "login" ? "current-password" : "new-password"}
         />
 
+        {mode === "signup" && (
+          <>
+            <label className="block text-xs text-muted mb-1" htmlFor="invite">Invite-code</label>
+            <input
+              id="invite"
+              value={invite}
+              onChange={(e) => setInvite(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              className="w-full bg-ink border border-edge rounded-lg px-3 py-2 mb-4 outline-none focus:border-session font-mono uppercase"
+              placeholder="JAMES-XXXXXX"
+              autoComplete="off"
+            />
+          </>
+        )}
+
         {error && <p className="text-short text-sm mb-3">{error}</p>}
         {info && <p className="text-long text-sm mb-3">{info}</p>}
 
         <button
           onClick={submit}
-          disabled={busy || !email || !password}
+          disabled={busy || !email || !password || (mode === "signup" && !invite.trim())}
           className="w-full bg-session text-ink font-semibold rounded-lg py-2.5 disabled:opacity-40 hover:brightness-110 transition"
         >
           {busy ? "Bezig…" : mode === "login" ? "Inloggen" : "Account aanmaken"}

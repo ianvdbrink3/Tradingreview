@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
     typeof body?.saved_trade_id === "string" && /^[0-9a-f-]{36}$/.test(body.saved_trade_id)
       ? body.saved_trade_id
       : null;
+  // Plancheck: pre-trade beoordeling — geen journal-entry, geen persist
+  const planMode = body?.mode === "plan";
 
   if (incoming.length === 0) {
     return Response.json({ error: "Geen berichten ontvangen." }, { status: 400 });
@@ -147,6 +149,7 @@ export async function POST(req: NextRequest) {
   async function persist(): Promise<{ trade_id?: string; updated?: boolean; save_error?: boolean }> {
     const { clean, journal, update } = extractJournal(fullText);
     const meta: { trade_id?: string; updated?: boolean; save_error?: boolean } = {};
+    if (planMode) return meta;
 
     try {
       if (journal && !savedTradeId) {
@@ -166,6 +169,8 @@ export async function POST(req: NextRequest) {
             les: j.les,
             actiepunt: j.actiepunt,
             discipline_score: j.discipline_score,
+            checks: j.checks,
+            entry_tijd: j.entry_tijd,
             rr_gepland: j.rr_gepland,
             uitkomst: j.uitkomst,
             resultaat_r: j.resultaat_r,

@@ -2,6 +2,7 @@ export type JournalData = {
   datum: string;
   markt: string;
   sessie: string;
+  entry_tijd: string;
   richting: string;
   setup: string;
   entry_reden: string;
@@ -10,6 +11,7 @@ export type JournalData = {
   les: string;
   actiepunt: string;
   discipline_score: number | null;
+  checks: Record<string, boolean | null> | null;
   rr_gepland: string;
   uitkomst: string;
   resultaat_r: number | null;
@@ -30,6 +32,8 @@ export type Trade = {
   les: string;
   actiepunt: string;
   discipline_score: number | null;
+  checks: Record<string, boolean | null> | null;
+  entry_tijd: string;
   rr_gepland: string;
   uitkomst: string;
   resultaat_r: number | null;

@@ -120,3 +120,44 @@ create policy "Eigen coach messages verwijderen"
 
 create index if not exists coach_messages_user_time_idx
   on public.coach_messages (user_id, created_at);
+
+-- v5: invite-gate op registratie + methode-checks op trades
+create table if not exists public.invite_codes (
+  code text primary key,
+  max_uses int not null default 25,
+  used int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- RLS aan zonder policies: codes zijn via de API onleesbaar; alleen de trigger (security definer) gebruikt ze
+alter table public.invite_codes enable row level security;
+
+create or replace function public.check_invite_code()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare ok boolean;
+begin
+  update public.invite_codes
+     set used = used + 1
+   where code = upper(trim(coalesce(new.raw_user_meta_data->>'invite_code', '')))
+     and used < max_uses
+  returning true into ok;
+  if ok is null then
+    raise exception 'invalid_invite_code';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists check_invite_code_before_signup on auth.users;
+create trigger check_invite_code_before_signup
+  before insert on auth.users
+  for each row execute function public.check_invite_code();
+
+-- Voeg zelf codes toe: insert into public.invite_codes (code, max_uses) values ('JOUW-CODE', 50);
+
+alter table public.trades add column if not exists checks jsonb;       -- methode-checklist (bron van de discipline-score)
+alter table public.trades add column if not exists entry_tijd text default '';

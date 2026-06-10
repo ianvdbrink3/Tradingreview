@@ -53,6 +53,55 @@ export async function POST(req: NextRequest) {
   }
   await supabase.from("api_calls").insert({ user_id: uid });
 
+  // ---- Coach-geheugen: samenvatting van het journal van deze student ----
+  // Apart (ongecachet) system-blok ná het gecachete kennisbank-blok, zodat de cache intact blijft.
+  const { data: recent } = await supabase
+    .from("trades")
+    .select("trade_date, entry_tijd, richting, setup, fout_tags, discipline_score, uitkomst, resultaat_r")
+    .eq("user_id", uid)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  let studentContext = "# JOURNAL VAN DEZE STUDENT\nNog geen trades in het journal. Moedig de student aan zijn eerste trade te laten reviewen.";
+  if (recent && recent.length > 0) {
+    const closed = recent.filter((t) => t.uitkomst === "winst" || t.uitkomst === "verlies");
+    const wins = closed.filter((t) => t.uitkomst === "winst").length;
+    const withR = recent.filter((t) => t.resultaat_r != null);
+    const rTotal = withR.reduce((s, t) => s + Number(t.resultaat_r), 0);
+    const scores = recent.filter((t) => t.discipline_score != null);
+    const avgScore = scores.length
+      ? (scores.reduce((s, t) => s + Number(t.discipline_score), 0) / scores.length).toFixed(1)
+      : "—";
+    const tagStats: Record<string, { n: number; r: number }> = {};
+    for (const t of recent)
+      for (const tag of t.fout_tags ?? [])
+        if (tag !== "Geen fout") {
+          tagStats[tag] = tagStats[tag] ?? { n: 0, r: 0 };
+          tagStats[tag].n++;
+          if (t.resultaat_r != null) tagStats[tag].r += Number(t.resultaat_r);
+        }
+    const tagLines = Object.entries(tagStats)
+      .sort((a, b) => b[1].n - a[1].n)
+      .slice(0, 6)
+      .map(([tag, s]) => `- ${tag}: ${s.n}× (totaal ${s.r >= 0 ? "+" : ""}${s.r.toFixed(1)}R op die trades)`)
+      .join("\n");
+    const tradeLines = recent
+      .slice(0, 10)
+      .map(
+        (t) =>
+          `- ${t.trade_date}${t.entry_tijd ? ` ${t.entry_tijd}` : ""} ${t.richting}, score ${t.discipline_score ?? "?"}/10, ${t.uitkomst}${t.resultaat_r != null ? ` (${Number(t.resultaat_r) >= 0 ? "+" : ""}${t.resultaat_r}R)` : ""}${(t.fout_tags ?? []).filter((x: string) => x !== "Geen fout").length ? `, fouten: ${(t.fout_tags ?? []).filter((x: string) => x !== "Geen fout").join(", ")}` : ""}${t.setup ? ` — ${String(t.setup).slice(0, 80)}` : ""}`
+      )
+      .join("\n");
+    studentContext = `# JOURNAL VAN DEZE STUDENT (laatste ${recent.length} trades — gebruik dit actief in je coaching)
+Samenvatting: winrate ${closed.length ? Math.round((wins / closed.length) * 100) + "%" : "n.v.t."} over ${closed.length} gesloten trades, totaal ${rTotal >= 0 ? "+" : ""}${rTotal.toFixed(1)}R (n=${withR.length}), gemiddelde discipline ${avgScore}/10.
+Meest gemaakte fouten:
+${tagLines || "- geen fout-tags geregistreerd"}
+Recente trades:
+${tradeLines}
+
+Verwijs concreet naar deze patronen wanneer relevant ("je laatste drie shorts misten een trigger"), maar plak ze er niet geforceerd bij elk antwoord in.`;
+  }
+
   const upstream = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -64,8 +113,11 @@ export async function POST(req: NextRequest) {
       model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
       max_tokens: 2000,
       stream: true,
-      // cache_control: system prompt (incl. kennisbank) wordt gecachet — scheelt fors in kosten
-      system: [{ type: "text", text: buildCoachSystemPrompt(), cache_control: { type: "ephemeral" } }],
+      // cache_control op het statische blok; het journal-blok varieert per student en blijft erbuiten
+      system: [
+        { type: "text", text: buildCoachSystemPrompt(), cache_control: { type: "ephemeral" } },
+        { type: "text", text: studentContext },
+      ],
       messages: incoming.map((m) => ({ role: m.role, content: m.text.trim() })),
     }),
   });

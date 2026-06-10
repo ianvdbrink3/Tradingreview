@@ -134,8 +134,21 @@ export default function CoachPage() {
         </div>
         <div className="min-w-0">
           <p className="font-semibold leading-tight">Coach</p>
-          <p className="text-xs text-muted leading-tight">Online · vraag alles over de methode</p>
+          <p className="text-xs text-muted leading-tight">Online · kent je journal · vraag alles over de methode</p>
         </div>
+        {thread.length > 0 && (
+          <button
+            onClick={async () => {
+              if (busy || !confirm("Gesprek wissen en opnieuw beginnen?")) return;
+              await createClient().from("coach_messages").delete().gte("created_at", "1970-01-01");
+              setThread([]);
+              setError(null);
+            }}
+            className="ml-auto text-xs text-muted hover:text-paper underline underline-offset-4 shrink-0"
+          >
+            Nieuw gesprek
+          </button>
+        )}
       </div>
 
       {/* Berichten */}

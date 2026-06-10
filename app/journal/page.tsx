@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { CHECK_KEYS, CHECK_LABELS } from "@/lib/journal";
 import type { Trade } from "@/lib/types";
 
 type Filter = "alle" | "winst" | "verlies" | "open";
@@ -34,11 +35,30 @@ export default function JournalPage() {
     const avgScore = scores.length
       ? scores.reduce((s, t) => s + Number(t.discipline_score ?? 0), 0) / scores.length
       : null;
-    const tagCounts: Record<string, number> = {};
+    // Fouten niet alleen tellen maar ook prijzen: totaal R van trades waarin de fout voorkwam
+    const tagStats: Record<string, { n: number; r: number; heeftR: boolean }> = {};
     for (const t of trades)
       for (const tag of t.fout_tags ?? [])
-        if (tag !== "Geen fout") tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
-    const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        if (tag !== "Geen fout") {
+          tagStats[tag] = tagStats[tag] ?? { n: 0, r: 0, heeftR: false };
+          tagStats[tag].n++;
+          if (t.resultaat_r != null && isFinite(Number(t.resultaat_r))) {
+            tagStats[tag].r += Number(t.resultaat_r);
+            tagStats[tag].heeftR = true;
+          }
+        }
+    const topTags = Object.entries(tagStats)
+      .sort((a, b) => b[1].n - a[1].n)
+      .slice(0, 5);
+    // Discipline-streak: aantal recentste trades op rij met score >= 7
+    let streak = 0;
+    for (const t of trades) {
+      if (t.discipline_score != null && Number(t.discipline_score) >= 7) streak++;
+      else break;
+    }
+    const openCount = trades.filter(
+      (t) => (t.uitkomst === "open" || t.uitkomst === "onbekend") && t.resultaat_r == null
+    ).length;
     const spark = [...trades]
       .slice(0, 15)
       .reverse()
@@ -53,8 +73,10 @@ export default function JournalPage() {
       expectancy,
       rCount: withR.length,
       topTags,
-      maxTag: topTags[0]?.[1] ?? 0,
+      maxTag: topTags[0]?.[1].n ?? 0,
       spark,
+      streak,
+      openCount,
     };
   }, [trades]);
 
@@ -120,6 +142,19 @@ export default function JournalPage() {
 
       {stats && trades && trades.length > 0 && (
         <>
+          {/* Open trades: resultaat bijwerken is een dagelijkse actie, dus bovenaan */}
+          {stats.openCount > 0 && filter !== "open" && (
+            <button
+              onClick={() => setFilter("open")}
+              className="w-full mb-4 bg-session/10 border border-session/30 rounded-xl px-4 py-2.5 text-sm text-left hover:bg-session/15 transition-colors"
+            >
+              <span className="text-session font-medium">
+                {stats.openCount} trade{stats.openCount > 1 ? "s" : ""} zonder resultaat
+              </span>{" "}
+              <span className="text-muted">— klik om bij te werken (uitkomst + R)</span>
+            </button>
+          )}
+
           {/* Statistieken */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
             <Stat label="Trades" value={String(stats.total)} />
@@ -133,12 +168,22 @@ export default function JournalPage() {
               value={`${stats.rTotal > 0 ? "+" : ""}${Number(stats.rTotal.toFixed(2))}R`}
               tone={stats.rTotal > 0 ? "long" : stats.rTotal < 0 ? "short" : undefined}
             />
-            <Stat
-              label="Expectancy"
-              value={stats.expectancy != null ? `${stats.expectancy > 0 ? "+" : ""}${stats.expectancy.toFixed(2)}R` : "—"}
-              sub={stats.expectancy != null ? `per trade, n=${stats.rCount}` : "vul resultaten in"}
-              tone={stats.expectancy != null ? (stats.expectancy > 0 ? "long" : "short") : undefined}
-            />
+            {/* Expectancy onder n=20 is ruis — dan liever de discipline-streak tonen */}
+            {stats.rCount >= 20 && stats.expectancy != null ? (
+              <Stat
+                label="Expectancy"
+                value={`${stats.expectancy > 0 ? "+" : ""}${stats.expectancy.toFixed(2)}R`}
+                sub={`per trade, n=${stats.rCount}`}
+                tone={stats.expectancy > 0 ? "long" : "short"}
+              />
+            ) : (
+              <Stat
+                label="Streak ≥7"
+                value={stats.streak > 0 ? `${stats.streak} 🔥` : "0"}
+                sub="trades op rij gedisciplineerd"
+                tone={stats.streak >= 3 ? "long" : undefined}
+              />
+            )}
             <Stat
               label="Gem. discipline"
               value={stats.avgScore != null ? `${stats.avgScore.toFixed(1)}/10` : "—"}
@@ -158,7 +203,7 @@ export default function JournalPage() {
               <div className="bg-panel border border-edge rounded-xl p-4">
                 <p className="text-xs text-muted uppercase tracking-wider mb-2">Meest gemaakte fouten</p>
                 <div className="space-y-1.5">
-                  {stats.topTags.map(([tag, n]) => (
+                  {stats.topTags.map(([tag, s]) => (
                     <button
                       key={tag}
                       onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
@@ -167,12 +212,19 @@ export default function JournalPage() {
                     >
                       <div className="flex justify-between text-xs mb-0.5">
                         <span className={tagFilter === tag ? "text-session" : "group-hover:text-paper"}>{tag}</span>
-                        <span className="font-mono text-muted">{n}×</span>
+                        <span className="font-mono text-muted">
+                          {s.n}×
+                          {s.heeftR && (
+                            <span className={s.r < 0 ? "text-short" : "text-long"}>
+                              {" "}· {s.r > 0 ? "+" : ""}{Number(s.r.toFixed(1))}R
+                            </span>
+                          )}
+                        </span>
                       </div>
                       <div className="h-1.5 bg-ink rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full ${tagFilter === tag ? "bg-session" : "bg-short/70"}`}
-                          style={{ width: `${(n / stats.maxTag) * 100}%` }}
+                          style={{ width: `${(s.n / stats.maxTag) * 100}%` }}
                         />
                       </div>
                     </button>
@@ -247,8 +299,29 @@ export default function JournalPage() {
                   </div>
                 ) : null}
 
+                {t.checks && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {CHECK_KEYS.map((k) => {
+                      const v = t.checks?.[k];
+                      if (v == null) return null;
+                      return (
+                        <span
+                          key={k}
+                          className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${
+                            v
+                              ? "bg-long/10 text-long border-long/25"
+                              : "bg-short/10 text-short border-short/25"
+                          }`}
+                        >
+                          {v ? "✓" : "✗"} {CHECK_LABELS[k]}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-sm mb-4">
-                  <Row k="Sessie" v={t.sessie} />
+                  <Row k="Entry-tijd (NY)" v={t.entry_tijd} mono />
                   <Row k="R:R gepland" v={t.rr_gepland} mono />
                   <Row k="Setup" v={t.setup} />
                   <Row k="Entry reden" v={t.entry_reden} />

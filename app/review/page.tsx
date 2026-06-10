@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 import SessionClock from "../components/session-clock";
+import NewsWeek from "../components/news-week";
 import { extractJournal } from "@/lib/journal";
 import type { ChatImage, ChatMessage } from "@/lib/types";
 
@@ -38,13 +39,10 @@ async function compressImage(file: File): Promise<Img> {
 }
 
 export default function ReviewPage() {
-  // Composer (eerste bericht)
+  // Composer (eerste bericht) — paste-first: de mentor leest de chart en vraagt zelf wat ontbreekt
   const [images, setImages] = useState<Img[]>([]);
-  const [timeframe, setTimeframe] = useState("");
-  const [bias, setBias] = useState("");
-  const [levels, setLevels] = useState("");
-  const [reden, setReden] = useState("");
   const [notities, setNotities] = useState("");
+  const [mode, setMode] = useState<"review" | "plan">("review");
   const [dragOver, setDragOver] = useState(false);
 
   // Gesprek
@@ -135,6 +133,7 @@ export default function ReviewPage() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
+          mode,
           saved_trade_id: savedTradeId,
           messages: nextThread.map(({ role, text, images }) => ({ role, text, images })),
         }),
@@ -190,19 +189,15 @@ export default function ReviewPage() {
   }
 
   function startReview() {
-    const context = [
-      timeframe && `Timeframe: ${timeframe}`,
-      bias && `HTF-bias: ${bias}`,
-      levels && `Entry / SL / TP: ${levels}`,
-      reden && `Reden voor entry: ${reden}`,
-      notities && `Notities: ${notities}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
+    const context = notities.trim();
+    const text =
+      mode === "plan"
+        ? `PLANCHECK — ik heb deze trade nog NIET genomen. Toets mijn plan aan de methode-checklist.\n\nMijn plan:\n${context || "(zie chart — vraag wat je mist)"}`
+        : `Review deze trade volgens de methode.\n\nContext van de trader:\n${context || "(zie chart — vraag wat je mist)"}`;
 
     send({
       role: "user",
-      text: `Review deze trade volgens de methode.\n\nContext van de trader:\n${context || "(geen extra context gegeven)"}`,
+      text,
       images: images.map(({ media_type, data }) => ({ media_type, data })),
       previews: images.map((i) => i.preview),
     });
@@ -234,11 +229,8 @@ export default function ReviewPage() {
     setThread([]);
     setStreaming("");
     setImages([]);
-    setTimeframe("");
-    setBias("");
-    setLevels("");
-    setReden("");
     setNotities("");
+    setMode("review");
     setFollowUp("");
     setFollowUpImages([]);
     setSavedTradeId(null);
@@ -248,17 +240,17 @@ export default function ReviewPage() {
     setBusy(false);
   }
 
-  const canStart = !busy && (images.length > 0 || notities.trim() || reden.trim());
+  const canStart = !busy && (images.length > 0 || notities.trim());
 
   return (
     <div>
       <div className="flex items-end justify-between mb-6">
         <div>
           <p className="font-mono text-xs text-session tracking-[0.2em] uppercase mb-2">
-            {started ? "Review-gesprek" : "Nieuwe review"}
+            {started ? (mode === "plan" ? "Plancheck" : "Review-gesprek") : "Nieuwe trade"}
           </p>
           <h1 className="text-2xl font-bold tracking-tight">
-            {started ? "De mentor kijkt mee" : "Upload je trade"}
+            {started ? "De mentor kijkt mee" : "Plak je chart"}
           </h1>
         </div>
         {started && (
@@ -329,20 +321,40 @@ export default function ReviewPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
-              <Field label="Timeframe" value={timeframe} onChange={setTimeframe} placeholder="bijv. 1m entry, 15m context" />
-              <Field label="HTF-bias" value={bias} onChange={setBias} placeholder="bijv. bearish na sweep PDH" />
+            <div className="flex gap-1 mt-5 bg-ink rounded-lg p-1">
+              {(
+                [
+                  ["review", "Trade reviewen", "achteraf · met journal-entry"],
+                  ["plan", "Plan checken", "vóór de entry · geen richting"],
+                ] as const
+              ).map(([m, label, sub]) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={`flex-1 py-2 rounded-md text-sm transition-colors ${
+                    mode === m ? "bg-panel text-paper" : "text-muted hover:text-paper"
+                  }`}
+                >
+                  <span className="block font-medium">{label}</span>
+                  <span className="block text-[10px] text-muted">{sub}</span>
+                </button>
+              ))}
             </div>
-            <Field label="Entry / SL / TP" value={levels} onChange={setLevels} placeholder="bijv. 21540 / 21565 / 21480" mono className="mt-3" />
-            <Field label="Reden voor entry" value={reden} onChange={setReden} placeholder="bijv. MSS + FVG na liquidity sweep" className="mt-3" />
+
             <div className="mt-3">
-              <label className="block text-xs text-muted mb-1">Notities</label>
+              <label className="block text-xs text-muted mb-1">
+                {mode === "plan" ? "Je plan (optioneel — de mentor vraagt wat ontbreekt)" : "Context (optioneel — de mentor vraagt wat ontbreekt)"}
+              </label>
               <textarea
                 value={notities}
                 onChange={(e) => setNotities(e.target.value)}
-                rows={3}
+                rows={2}
                 className="w-full bg-ink border border-edge rounded-lg px-3 py-2 outline-none focus:border-session text-sm"
-                placeholder="Wat dacht en voelde je voor, tijdens en na de trade? Heb je het resultaat al (bijv. +2R)?"
+                placeholder={
+                  mode === "plan"
+                    ? "bijv. short vanaf 15m OB C na sweep, stop 10pt, target sessie-low"
+                    : "bijv. entry 09:47, stop verplaatst naar BE, resultaat +2R"
+                }
               />
             </div>
 
@@ -353,11 +365,17 @@ export default function ReviewPage() {
               disabled={!canStart}
               className="w-full mt-4 bg-session text-ink font-semibold rounded-lg py-2.5 disabled:opacity-40 hover:brightness-110 transition"
             >
-              Start review
+              {mode === "plan" ? "Check mijn plan" : "Start review"}
             </button>
             <p className="text-[11px] text-muted mt-2 text-center">
-              Ontbreekt er context? Dan stelt de mentor eerst vragen — je kunt gewoon terugschrijven.
+              {mode === "plan"
+                ? "De mentor toetst je plan aan de checklist — hij geeft géén richting of entry-advies."
+                : "Ontbreekt er context? Dan stelt de mentor eerst vragen — je kunt gewoon terugschrijven."}
             </p>
+          </div>
+
+          <div className="mt-4">
+            <NewsWeek />
           </div>
         </>
       )}
@@ -376,7 +394,9 @@ export default function ReviewPage() {
                     </div>
                   )}
                   <p className="text-sm whitespace-pre-wrap">
-                    {m.text.replace(/^Review deze trade volgens de methode\.\n\nContext van de trader:\n/, "")}
+                    {m.text
+                      .replace(/^Review deze trade volgens de methode\.\n\nContext van de trader:\n/, "")
+                      .replace(/^PLANCHECK — ik heb deze trade nog NIET genomen\. Toets mijn plan aan de methode-checklist\.\n\nMijn plan:\n/, "")}
                   </p>
                 </div>
               </div>
@@ -471,7 +491,13 @@ export default function ReviewPage() {
               }}
               disabled={busy}
               rows={Math.min(5, Math.max(1, followUp.split("\n").length))}
-              placeholder={savedTradeId ? "Vraag door, of deel je resultaat (bijv. +2R)…" : "Beantwoord de vragen van de mentor…"}
+              placeholder={
+                savedTradeId
+                  ? "Vraag door, of deel je resultaat (bijv. +2R)…"
+                  : mode === "plan"
+                    ? "Vul je plan aan of vraag door…"
+                    : "Beantwoord de vragen van de mentor…"
+              }
               className="flex-1 bg-panel border border-edge rounded-xl px-4 py-3 outline-none focus:border-session text-sm shadow-lg shadow-ink/60 resize-none"
             />
             <button
@@ -490,30 +516,3 @@ export default function ReviewPage() {
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  mono,
-  className = "",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  mono?: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <label className="block text-xs text-muted mb-1">{label}</label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`w-full bg-ink border border-edge rounded-lg px-3 py-2 outline-none focus:border-session text-sm ${mono ? "font-mono" : ""}`}
-      />
-    </div>
-  );
-}

@@ -42,7 +42,7 @@ export default function SessionClock({ compact = false }: { compact?: boolean })
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2 font-mono text-xs" title="New York sessie 08:30–12:00 EST">
+      <div className="flex items-center gap-2 font-mono text-xs" title="New York sessie 08:30–12:00 ET">
         <span
           className={`inline-block w-1.5 h-1.5 rounded-full ${
             open ? "bg-long animate-pulse" : "bg-muted/50"
@@ -66,7 +66,7 @@ export default function SessionClock({ compact = false }: { compact?: boolean })
             {open ? "NY-sessie live" : now.weekend ? "Weekend — markt dicht" : "Buiten sessievenster"}
           </span>
         </div>
-        <span className="font-mono text-sm text-session">{now.label} EST</span>
+        <span className="font-mono text-sm text-session">{now.label} ET</span>
       </div>
       <div className="relative h-2 rounded-full bg-ink overflow-hidden">
         <div
