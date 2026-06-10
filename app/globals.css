@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0c1017;
+  color: #e8ebf0;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Subtiele chart-grid achtergrond */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(232, 235, 240, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 235, 240, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Markdown-styling voor de review-output */
+.review-md h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 1.5rem 0 0.5rem;
+  color: #e8a33d;
+}
+.review-md h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin: 1.4rem 0 0.4rem;
+  color: #8a93a6;
+  border-bottom: 1px solid #1f2937;
+  padding-bottom: 0.35rem;
+}
+.review-md p {
+  margin: 0.5rem 0;
+  line-height: 1.65;
+}
+.review-md ul {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.1rem;
+  list-style: none;
+}
+.review-md li {
+  position: relative;
+  margin: 0.3rem 0;
+  line-height: 1.6;
+  padding-left: 0.85rem;
+}
+.review-md li::before {
+  content: "—";
+  position: absolute;
+  left: -0.35rem;
+  color: #e8a33d;
+}
+.review-md strong {
+  color: #fff;
+}
+.review-md code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.85em;
+  background: #1f2937;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
