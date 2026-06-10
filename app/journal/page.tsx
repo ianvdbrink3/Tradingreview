@@ -15,6 +15,25 @@ export default function JournalPage() {
   const [filter, setFilter] = useState<Filter>("alle");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [shots, setShots] = useState<Record<string, string[]>>({});
+  const [debrief, setDebrief] = useState<string | null>(null);
+  const [debriefBusy, setDebriefBusy] = useState(false);
+  const [debriefError, setDebriefError] = useState<string | null>(null);
+
+  async function loadDebrief() {
+    if (debriefBusy) return;
+    setDebriefBusy(true);
+    setDebriefError(null);
+    try {
+      const res = await fetch("/api/debrief", { method: "POST" });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || "Debrief mislukt.");
+      setDebrief(j.debrief);
+    } catch (e: any) {
+      setDebriefError(e.message || "Er ging iets mis.");
+    } finally {
+      setDebriefBusy(false);
+    }
+  }
 
   useEffect(() => {
     createClient()
@@ -117,8 +136,33 @@ export default function JournalPage() {
 
   return (
     <div>
-      <p className="font-mono text-xs text-session tracking-[0.2em] uppercase mb-2">Journal</p>
-      <h1 className="text-2xl font-bold tracking-tight mb-6">Jouw trades</h1>
+      <div className="flex items-end justify-between mb-6">
+        <div>
+          <p className="font-mono text-xs text-session tracking-[0.2em] uppercase mb-2">Journal</p>
+          <h1 className="text-2xl font-bold tracking-tight">Jouw trades</h1>
+        </div>
+        {trades && trades.length >= 3 && (
+          <button
+            onClick={loadDebrief}
+            disabled={debriefBusy}
+            className="text-sm bg-session/10 border border-session/30 text-session rounded-lg px-3.5 py-1.5 hover:bg-session/15 transition disabled:opacity-50"
+          >
+            {debriefBusy ? "Analyseert…" : "AI-debrief"}
+          </button>
+        )}
+      </div>
+
+      {debriefError && <p className="text-short text-sm mb-4">{debriefError}</p>}
+      {debrief && (
+        <div className="bg-panel border border-session/30 rounded-xl p-5 mb-6">
+          <div className="review-md text-sm">
+            <ReactMarkdown>{debrief}</ReactMarkdown>
+          </div>
+          <button onClick={() => setDebrief(null)} className="mt-3 text-xs text-muted hover:text-paper underline underline-offset-4">
+            Sluiten
+          </button>
+        </div>
+      )}
 
       {trades === null && (
         <div className="space-y-3">

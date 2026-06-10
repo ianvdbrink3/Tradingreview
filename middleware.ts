@@ -36,7 +36,8 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/journal") ||
     path.startsWith("/coach") ||
     path.startsWith("/api/review") ||
-    path.startsWith("/api/coach");
+    path.startsWith("/api/coach") ||
+    path.startsWith("/api/debrief");
 
   if (!isAuthed && isProtected) {
     if (path.startsWith("/api/")) {
