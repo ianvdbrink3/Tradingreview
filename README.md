@@ -22,8 +22,8 @@ Status van deze installatie:
 
 Lokaal draaien: `.env.example` → `.env.local` invullen, dan `npm install && npm run dev`.
 
-## Kennisbank uitbreiden
-De methode-prompt staat in `lib/system-prompt.ts`. Plak cursus-transcripten/Discord-content in de `KENNISBANK`-constante; via prompt caching wordt dit maar één keer per 5 minuten volledig afgerekend. Bij 300+ pagina's: overweeg RAG met pgvector.
+## Kennisbank
+De JamesTrades mentorship-transcripten (Price Engineering, Precision Levels, EM-indicator) staan in `lib/kennisbank.ts` — **server-only**, zodat het cursusmateriaal nooit in de browser-bundle belandt. De methode-prompt zelf staat in `lib/system-prompt.ts` (dat bestand wordt wél client-side gebundeld via de fout-tags; zet er dus geen cursusinhoud in). Nieuwe transcripten/Discord-content plak je onderaan de `KENNISBANK`-constante in `lib/kennisbank.ts`; via prompt caching wordt dit maar één keer per 5 minuten volledig afgerekend. Hoofdstuk 2 (Manipulation) van het brondocument bevat alleen screenshots — zodra daar een transcript van is, kan die erbij. Bij 300+ pagina's: overweeg RAG met pgvector.
 
 ## Betrouwbaarheid
 - **Server-side opslag**: het journal wordt op de server geparsed, gevalideerd en opgeslagen vóórdat de stream sluit. Tab dichtklappen na de review kan geen entry meer kosten.

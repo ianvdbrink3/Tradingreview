@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { buildCoachSystemPrompt } from "@/lib/system-prompt";
+import { buildCoachSystemPrompt } from "@/lib/kennisbank";
 import type { ChatMessage } from "@/lib/types";
 
 export const maxDuration = 300;

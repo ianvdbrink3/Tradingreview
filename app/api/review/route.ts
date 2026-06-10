@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { buildSystemPrompt } from "@/lib/system-prompt";
+import { buildSystemPrompt } from "@/lib/kennisbank";
 import { extractJournal, validateJournal, validateR, validateUitkomst } from "@/lib/journal";
 import type { ChatMessage } from "@/lib/types";
 
