@@ -14,10 +14,13 @@ Trade review & journaling app volgens de methode van James. Studenten uploaden c
 - Anthropic API — server-side met streaming en prompt caching (geen client-side API key)
 
 ## Setup
-1. **Supabase**: project aanmaken → `supabase/schema.sql` uitvoeren in de SQL Editor (maakt ook de storage-bucket + policies) → Authentication → Email provider aan.
-2. **Env vars** (`.env.example` → `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (default `claude-sonnet-4-6`).
-3. **Lokaal**: `npm install && npm run dev`
-4. **Vercel**: repo importeren, zelfde env vars zetten. `maxDuration = 300` op de review-route vereist Fluid Compute (standaard aan op nieuwe projecten).
+
+Status van deze installatie:
+- ✅ **Supabase**: project `nq-trade-mentor` (ref `gwngxwsjpjxtcsbtczwv`, regio eu-central-1) is aangemaakt en `supabase/schema.sql` is als migratie uitgevoerd (tabellen, RLS, storage-bucket + policies).
+- ✅ **Publieke env vars**: staan in `.env.production` (Supabase-URL en anon key zijn publieke waarden; RLS beschermt de data) en worden automatisch meegebouwd.
+- ⬜ **Vercel**: repo importeren via [vercel.com/new](https://vercel.com/new) → `ianvdbrink3/Tradingreview` kiezen → bij env vars alléén `ANTHROPIC_API_KEY` toevoegen → Deploy. `maxDuration = 300` op de review-route vereist Fluid Compute (standaard aan op nieuwe projecten).
+
+Lokaal draaien: `.env.example` → `.env.local` invullen, dan `npm install && npm run dev`.
 
 ## Kennisbank uitbreiden
 De methode-prompt staat in `lib/system-prompt.ts`. Plak cursus-transcripten/Discord-content in de `KENNISBANK`-constante; via prompt caching wordt dit maar één keer per 5 minuten volledig afgerekend. Bij 300+ pagina's: overweeg RAG met pgvector.
