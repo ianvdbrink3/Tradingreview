@@ -31,7 +31,12 @@ export async function middleware(request: NextRequest) {
 
   const isAuthed = !!user;
   const path = request.nextUrl.pathname;
-  const isProtected = path.startsWith("/review") || path.startsWith("/journal") || path.startsWith("/api/review");
+  const isProtected =
+    path.startsWith("/review") ||
+    path.startsWith("/journal") ||
+    path.startsWith("/coach") ||
+    path.startsWith("/api/review") ||
+    path.startsWith("/api/coach");
 
   if (!isAuthed && isProtected) {
     if (path.startsWith("/api/")) {

@@ -11,6 +11,7 @@ export default function Nav() {
 
   const items = [
     { href: "/review", label: "Review" },
+    { href: "/coach", label: "Coach" },
     { href: "/journal", label: "Journal" },
   ];
 
